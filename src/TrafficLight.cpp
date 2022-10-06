@@ -1,6 +1,8 @@
 #include <iostream>
 #include <random>
+#include <chrono>
 #include "TrafficLight.h"
+#include <thread>
 
 /* Implementation of class "MessageQueue" */
 
@@ -23,7 +25,7 @@ void MessageQueue<T>::send(T &&msg)
 
 /* Implementation of class "TrafficLight" */
 
-/* 
+ 
 TrafficLight::TrafficLight()
 {
     _currentPhase = TrafficLightPhase::red;
@@ -44,6 +46,8 @@ TrafficLightPhase TrafficLight::getCurrentPhase()
 void TrafficLight::simulate()
 {
     // FP.2b : Finally, the private method „cycleThroughPhases“ should be started in a thread when the public method „simulate“ is called. To do this, use the thread queue in the base class. 
+    threads.emplace_back(std::thread(&TrafficLight::cycleThroughPhases, this));
+
 }
 
 // virtual function which is executed in a thread
@@ -53,6 +57,40 @@ void TrafficLight::cycleThroughPhases()
     // and toggles the current phase of the traffic light between red and green and sends an update method 
     // to the message queue using move semantics. The cycle duration should be a random value between 4 and 6 seconds. 
     // Also, the while-loop should use std::this_thread::sleep_for to wait 1ms between two cycles. 
+
+    auto lastUpdate = std::chrono::system_clock::now();
+    double cycleDuration;
+
+    while (true)
+    {
+        // sleep at every iteration to reduce CPU usage
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+        // Choose a random value between 4.0 and 6.0 seconds
+        cycleDuration = 4.0 + ((double)rand())/RAND_MAX * 2;
+
+        // compute time difference to stop watch
+        long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - lastUpdate).count();
+        
+        // Check if cycleDuration has passed
+        if (timeSinceLastUpdate >= cycleDuration)
+        {
+            if (_currentPhase == TrafficLightPhase::red)
+                // change phase
+                _currentPhase = TrafficLightPhase::green;
+            else
+                _currentPhase = TrafficLightPhase::red;
+
+            // Update the last update time
+            lastUpdate = std::chrono::system_clock::now();
+
+            // send an update........
+            std::lock_guard<std::mutex> lock(_mtx);
+            std::cout << "traffic-light # " << _id << ": state is changed to: " << (_currentPhase == TrafficLightPhase::red ? "red" : "green") << std::endl;
+        
+        }
+    }
+
+
 }
 
-*/
