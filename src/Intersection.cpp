@@ -34,7 +34,7 @@ void WaitingVehicles::permitEntryToFirstInQueue()
     auto firstVehicle = _vehicles.begin();
 
     // fulfill promise and send signal back that permission to enter has been granted
-    firstPromise->set_value();
+        firstPromise->set_value();
 
     // remove front elements from both queues
     _vehicles.erase(firstVehicle);
@@ -91,7 +91,7 @@ void Intersection::addVehicleToQueue(std::shared_ptr<Vehicle> vehicle)
     if (_trafficLight.getCurrentPhase() != TrafficLightPhase::green){
         _trafficLight.waitForGreen();
     }
-
+    
     lck.lock();
     std::cout << "Intersection #" << _id << ": Vehicle #" << vehicle->getID() << " is granted entry." << std::endl;
     lck.unlock();

@@ -21,6 +21,7 @@ class MessageQueue
 public:
     T receive();
     void send(T &&msg);
+    int size() {return _messages.size();}
 private:
     std::mutex _mutex;
     std::condition_variable _cond;

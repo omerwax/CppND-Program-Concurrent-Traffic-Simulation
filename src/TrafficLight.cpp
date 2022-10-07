@@ -14,16 +14,13 @@ T MessageQueue<T>::receive()
     // The received object should then be returned by the receive function.
     // perform queue modification under the lock
     std::unique_lock<std::mutex> uLock(_mutex);
-    _cond.wait(uLock, [this] { return !_messages.empty(); }); // pass unique lock to condition variable
+    _cond.wait(uLock, [this] { return !_messages.empty(); });
 
     // remove last vector element from queue
     TrafficLightPhase msg = std::move(_messages.back());
     _messages.pop_back();
 
-    // Debug- Delete
-    std::cout << "MessageQueue::receive()" << std::endl;
-
-    return msg; // will not be copied due to return value optimization (RVO) in C++ 
+    return msg; 
 }
 
 template <typename T>
@@ -32,15 +29,15 @@ void MessageQueue<T>::send(T &&msg)
     // FP.4a : The method send should use the mechanisms std::lock_guard<std::mutex> 
     // as well as _condition.notify_one() to add a new message to the queue and afterwards send a notification.
 
-          // perform vector modification under the lock
+        // perform queue modification under the lock
         std::lock_guard<std::mutex> uLock(_mutex);
 
-        // add vector to queue
+        // First we need to clear to queue, to drop old messages, they cause acting on un-relevant data
+        _messages.clear();
+
+        // add the message to queue
         _messages.push_back(std::move(msg));
         _cond.notify_one(); // notify client after pushing new Vehicle into vector
-
-        // Debug - Delete later
-        std::cout << "MessageQueue::send()" << std::endl;
 }
 
 /* Implementation of class "TrafficLight" */
@@ -48,7 +45,7 @@ void MessageQueue<T>::send(T &&msg)
  
 TrafficLight::TrafficLight()
 {
-    _currentPhase = TrafficLightPhase::green;
+    _currentPhase = TrafficLightPhase::red;
 }
 
 void TrafficLight::waitForGreen()
@@ -56,10 +53,9 @@ void TrafficLight::waitForGreen()
     // FP.5b : add the implementation of the method waitForGreen, in which an infinite while-loop 
     // runs and repeatedly calls the receive function on the message queue. 
     // Once it receives TrafficLightPhase::green, the method returns.
-    while(_messageQueue.receive() != TrafficLightPhase::green){
-        // sleep 1 ms to not choke the processor
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
+    
+    while (_messageQueue.receive() != TrafficLightPhase::green)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     return;
 }
 
@@ -85,6 +81,7 @@ void TrafficLight::cycleThroughPhases()
 
     auto lastUpdate = std::chrono::system_clock::now();
     double cycleDuration;
+    srand(_id);
 
     while (true)
     {
@@ -92,7 +89,7 @@ void TrafficLight::cycleThroughPhases()
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
         // Choose a random value between 4.0 and 6.0 seconds
-        cycleDuration = 4000.0 + rand() % 2000;
+        cycleDuration = 4000 + (rand() % 2000);
 
         // compute time difference to stop watch
         long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
@@ -117,9 +114,9 @@ void TrafficLight::cycleThroughPhases()
             lastUpdate = std::chrono::system_clock::now();
 
             // Debug print
-            std::lock_guard<std::mutex> lock(_mtx);
-            std::cout << "traffic-light # " << _id << ": state is changed to: " << (_currentPhase == TrafficLightPhase::red ? "red" : "green") << std::endl;
-            std::cout << "traffic-light # " << _id << ": CycleDurtion = : " << cycleDuration << std::endl;
+            // std::lock_guard<std::mutex> lock(_mtx);
+            // std::cout << "traffic-light # " << _id << ": state is changed to: " << (_currentPhase == TrafficLightPhase::red ? "red" : "green") << std::endl;
+            // std::cout << "traffic-light # " << _id << ": CycleDurtion = : " << cycleDuration << std::endl;
         
         }
     }
