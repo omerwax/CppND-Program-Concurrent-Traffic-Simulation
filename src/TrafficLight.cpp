@@ -36,7 +36,7 @@ void MessageQueue<T>::send(T &&msg)
         _messages.clear();
 
         // add the message to queue
-        _messages.push_back(std::move(msg));
+        _messages.emplace_back(std::move(msg));
         _cond.notify_one(); // notify client after pushing new Vehicle into vector
 }
 
@@ -82,6 +82,7 @@ void TrafficLight::cycleThroughPhases()
     auto lastUpdate = std::chrono::system_clock::now();
     double cycleDuration;
     srand(_id);
+      
 
     while (true)
     {
@@ -89,7 +90,12 @@ void TrafficLight::cycleThroughPhases()
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
         // Choose a random value between 4.0 and 6.0 seconds
-        cycleDuration = 4000 + (rand() % 2000);
+        std::uniform_int_distribution<int> distribution(0, 2000);
+
+        std::mt19937 mt(_id);
+
+        // cycleDuration = 4000 + (mt() % 2000);
+        cycleDuration = 4000 + (1.0 * mt())/mt.max() * 2000.0;
 
         // compute time difference to stop watch
         long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
@@ -97,19 +103,17 @@ void TrafficLight::cycleThroughPhases()
         // Check if cycleDuration has passed
         if (timeSinceLastUpdate >= cycleDuration)
         {
-            if (_currentPhase == TrafficLightPhase::red)            {
+            if (_currentPhase == TrafficLightPhase::red){
                 // change phase
                 _currentPhase = TrafficLightPhase::green;
-                // Push the new phase to the queue
-                _messageQueue.send(std::move(TrafficLightPhase::green));
             }
             else{
                 // change phase
                 _currentPhase = TrafficLightPhase::red;
-                // Push the new phase to the queue
-                _messageQueue.send(std::move(TrafficLightPhase::red));
             }
-
+            
+            // Push the new phase to the queue
+            _messageQueue.send(std::move(_currentPhase));
             // Update the last update time
             lastUpdate = std::chrono::system_clock::now();
 
